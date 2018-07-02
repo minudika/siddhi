@@ -48,7 +48,6 @@ public class ProcessStreamReceiver implements StreamJunction.Receiver {
     protected int stateProcessorsSize;
     protected LatencyTracker latencyTracker;
     protected LockWrapper lockWrapper;
-    protected ComplexEventChunk<StreamEvent> batchingStreamEventChunk = new ComplexEventChunk<StreamEvent>(false);
     protected boolean batchProcessingAllowed;
     protected SiddhiAppContext siddhiAppContext;
     private StreamEventConverter streamEventConverter;
@@ -153,23 +152,24 @@ public class ProcessStreamReceiver implements StreamJunction.Receiver {
 
 
     @Override
-    public void receive(Event event, boolean endOfBatch) {
-        StreamEvent borrowedEvent = streamEventPool.borrowEvent();
-        streamEventConverter.convertEvent(event, borrowedEvent);
-        ComplexEventChunk<StreamEvent> streamEventChunk = null;
-        synchronized (this) {
-            batchingStreamEventChunk.add(borrowedEvent);
-            if (endOfBatch) {
-                streamEventChunk = batchingStreamEventChunk;
-                batchingStreamEventChunk = new ComplexEventChunk<StreamEvent>(this.batchProcessingAllowed);
+    public void receive(List<Event> events) {
+        StreamEvent firstEvent = null;
+        StreamEvent currentEvent = null;
+        for (Event event : events) {
+            StreamEvent nextEvent = streamEventPool.borrowEvent();
+            streamEventConverter.convertEvent(event, nextEvent);
+            if (firstEvent == null) {
+                firstEvent = nextEvent;
+            } else {
+                currentEvent.setNext(nextEvent);
             }
+            currentEvent = nextEvent;
+
         }
-        if (streamEventChunk != null) {
-            if (siddhiDebugger != null) {
-                siddhiDebugger.checkBreakPoint(queryName, SiddhiDebugger.QueryTerminal.IN, streamEventChunk.getFirst());
-            }
-            process(streamEventChunk);
+        if (siddhiDebugger != null) {
+            siddhiDebugger.checkBreakPoint(queryName, SiddhiDebugger.QueryTerminal.IN, firstEvent);
         }
+        process(new ComplexEventChunk<StreamEvent>(firstEvent, currentEvent, this.batchProcessingAllowed));
     }
 
     @Override

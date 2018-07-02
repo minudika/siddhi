@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -16,31 +16,29 @@
  * under the License.
  */
 
-package org.wso2.siddhi.core.util.transport;
+package org.wso2.siddhi.core.util.event.handler;
 
 import org.wso2.siddhi.core.event.Event;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
- * Holder class to represent supported dynamic options in sources and sinks.
+ * EventExchangeHolder that holds data for StreamJunction event exchange
  */
-public class DynamicOptions {
+public class EventExchangeHolder {
+
+    private AtomicBoolean processed = new AtomicBoolean(false);
     private Event event;
 
-    private int variableOptionIndex = -1;
-
-    public DynamicOptions(Event event) {
-        this.event = event;
+    public EventExchangeHolder(int dataSize) {
+        this.event = new Event(dataSize);
     }
 
     public Event getEvent() {
         return event;
     }
 
-    int getVariableOptionIndex() {
-        return variableOptionIndex;
-    }
-
-    void setVariableOptionIndex(int index) {
-        variableOptionIndex = index;
+    public boolean getAndSetIsProcessed(boolean isProcessed) {
+        return processed.getAndSet(isProcessed);
     }
 }
